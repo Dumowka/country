@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package guru.qa.grpc.country;
+
+import "google/protobuf/empty.proto";
+
+option java_multiple_files = true;
+option java_package = "guru.qa.grpc.country";
+option java_outer_classname = "CountryProto";
+
+service CountryService {
+  rpc AllCountry(google.protobuf.Empty) returns (CountryListResponse) {}
+  rpc Country(IsoCountry) returns (CountryResponse) {}
+  rpc AddCountries(stream CountryRequest) returns (AddedCountriesResponse) {}
+  rpc UpdateCountry(CountryUpdateRequest) returns (CountryResponse) {}
+}
+
+message IsoCountry {
+  string iso = 1;
+}
+
+message CountryRequest {
+  string name = 1;
+  string iso = 2;
+  Geometry coordinates = 3;
+}
+
+message Point {
+  repeated double coordinates = 1;
+}
+
+message Line {
+  repeated Point points = 1;
+}
+
+message Polygon {
+  repeated Line lines = 1;
+}
+
+message Geometry {
+  repeated Polygon polygons = 1;
+}
+
+message CountryResponse {
+  string id = 1;
+  string name = 2;
+  string iso = 3;
+  Geometry coordinates = 4;
+}
+
+message CountryListResponse {
+  repeated CountryResponse countries = 1;
+}
+
+message CountryUpdateRequest {
+  string iso = 1;
+  Geometry coordinates = 2;
+}
+
+message AddedCountriesResponse {
+  uint32 count = 1;
+}
