@@ -5,6 +5,7 @@ import guru.qa.country.data.CountryRepository;
 import guru.qa.country.domain.Country;
 import guru.qa.country.domain.graphql.CountryGql;
 import guru.qa.country.domain.graphql.CountryInputGql;
+import guru.qa.country.domain.grpc.CountryGrpc;
 import guru.qa.country.ex.CountryNotFoundException;
 import guru.qa.country.ex.CountryWithIsoAlreadyExist;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +42,18 @@ public class DbCountryService implements CountryService {
     }
 
     @Override
+    public List<CountryGrpc> allGrpcCountries() {
+        return countryRepository.findAll().stream().map(countryEntity ->
+                new CountryGrpc(
+                        countryEntity.getId(),
+                        countryEntity.getName(),
+                        countryEntity.getIso(),
+                        parseCoordinates(countryEntity.getCoordinates())
+                )
+        ).toList();
+    }
+
+    @Override
     public Slice<CountryGql> allGqlCountries(Pageable pageable) {
         return countryRepository.findAll(pageable)
                 .map(countryEntity -> new CountryGql(
@@ -56,6 +69,13 @@ public class DbCountryService implements CountryService {
         CountryEntity countryEntity = countryRepository.findCountryEntityByIso(iso)
                 .orElseThrow(() -> new CountryNotFoundException("Не найдена страна с ISO' = " + iso + "'"));
         return fromEntity(countryEntity);
+    }
+
+    @Override
+    public CountryGrpc countryGrpcByIso(String iso) {
+        CountryEntity countryEntity = countryRepository.findCountryEntityByIso(iso)
+                .orElseThrow(() -> new CountryNotFoundException("Не найдена страна с ISO' = " + iso + "'"));
+        return CountryGrpc.fromEntity(countryEntity);
     }
 
     @Override
@@ -83,6 +103,21 @@ public class DbCountryService implements CountryService {
         countryEntity.setCoordinates(country.coordinates().toString());
 
         return fromEntity(countryRepository.save(countryEntity));
+    }
+
+    @Override
+    public CountryGrpc addCountry(CountryGrpc country) {
+        Optional<CountryEntity> countryEntityByIso = countryRepository.findCountryEntityByIso(country.iso());
+        if (countryEntityByIso.isPresent()) {
+            throw new CountryWithIsoAlreadyExist(String.format("Страна с ISO = '%s' уже существует", country.iso()));
+        }
+
+        CountryEntity countryEntity = new CountryEntity();
+        countryEntity.setName(country.name());
+        countryEntity.setIso(country.iso());
+        countryEntity.setCoordinates(country.coordinates().toString());
+
+        return CountryGrpc.fromEntity(countryRepository.save(countryEntity));
     }
 
     @Override
@@ -115,6 +150,15 @@ public class DbCountryService implements CountryService {
 
         countryEntity.setCoordinates(country.coordinates().toString());
         return fromEntity(countryRepository.save(countryEntity));
+    }
+
+    @Override
+    public CountryGrpc updateCountryGrpc(String iso, List<List<List<List<Double>>>> coordinates) {
+        CountryEntity countryEntity = countryRepository.findCountryEntityByIso(iso)
+                .orElseThrow(() -> new CountryNotFoundException("Не найдена страна с ISO' = " + iso + "'"));
+
+        countryEntity.setCoordinates(coordinates.toString());
+        return CountryGrpc.fromEntity(countryRepository.save(countryEntity));
     }
 
     @Override
